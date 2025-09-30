@@ -26,18 +26,19 @@ class User:
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36',
         }
 
-        # First, get the login page
-        login_page = self.sesh.get('https://www.expireddomains.net/login/', headers=headers)
-        print(f"Login page status: {login_page.status_code}")
+        # Try to authenticate directly on the member subdomain
+        print("Trying to authenticate on member subdomain...")
+        member_login_page = self.sesh.get('https://member.expireddomains.net/login/', headers=headers)
+        print(f"Member login page status: {member_login_page.status_code}")
         
-        # Login with credentials
+        # Login with credentials on member subdomain
         data = {
             'login': config.username,
             'password': config.password,
             'redirect_to_url': '/home',
         }
         
-        response = self.sesh.post('https://www.expireddomains.net/logincheck/', headers=headers, data=data)
+        response = self.sesh.post('https://member.expireddomains.net/logincheck/', headers=headers, data=data)
         print(f"Login response status: {response.status_code}")
         print(f"Login response URL: {response.url}")
         
@@ -59,6 +60,18 @@ class User:
             
             if "login" not in auth_response.url.lower() and auth_response.status_code == 200:
                 print("Authentication successful!")
+                # Try to access the member subdomain to establish cookies there
+                print("Establishing cookies for member subdomain...")
+                member_headers = {
+                    'authority': 'member.expireddomains.net',
+                    'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+                    'accept-language': 'en-US,en;q=0.9,pl-PL;q=0.8,pl;q=0.7,de;q=0.6',
+                    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36',
+                }
+                member_response = self.sesh.get('https://member.expireddomains.net/', headers=member_headers)
+                print(f"Member subdomain response: {member_response.status_code}")
+                print(f"Member subdomain URL: {member_response.url}")
+                print(f"Cookies after member access: {dict(self.sesh.cookies)}")
                 return True
             else:
                 print("Authentication failed")
@@ -107,12 +120,10 @@ class User:
         }
 
 
-        params = {
-            'q': self.keyword,
-            'searchinit': '1',
-        }
-
-        response = self.sesh.get('https://member.expireddomains.net/domain-name-search/', params=params, headers=headers)
+        # Try the exact URL format you mentioned
+        url = f"https://member.expireddomains.net/domain-name-search/?q={self.keyword}&searchinit=1"
+        print(f"Trying URL: {url}")
+        response = self.sesh.get(url, headers=headers)
         print(f"Search response status: {response.status_code}")
         print(f"Search response URL: {response.url}")
         print(f"Response length: {len(response.text)}")
