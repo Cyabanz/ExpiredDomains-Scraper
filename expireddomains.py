@@ -11,7 +11,7 @@ class User:
     def get_cookie(self):
 
         headers = {
-            'authority': 'member.expireddomains.net',
+            'authority': 'www.expireddomains.net',
             'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
             'accept-language': 'en-US,en;q=0.9,pl-PL;q=0.8,pl;q=0.7,de;q=0.6',
             'cache-control': 'max-age=0',
@@ -33,7 +33,7 @@ class User:
             'redirect_to_url': '/home',
         }
 
-        response = self.sesh.post('https://member.expireddomains.net/login/', headers=headers, data=data)
+        response = self.sesh.post('https://www.expireddomains.net/login/', headers=headers, data=data)
 
         if "The supplied login information are unknown." in response.text:
             return False
