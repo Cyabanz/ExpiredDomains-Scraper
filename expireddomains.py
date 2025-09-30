@@ -119,10 +119,22 @@ class User:
         }
 
 
-        # Try using the main domain instead
-        url = f"https://www.expireddomains.net/domain-name-search/?q={self.keyword}&searchinit=1"
-        print(f"Trying URL: {url}")
-        response = self.sesh.get(url, headers=headers)
+        # Try different search approaches
+        search_urls = [
+            f"https://www.expireddomains.net/domain-name-search/?q={self.keyword}&searchinit=1",
+            f"https://www.expireddomains.net/domain-name-search/?q={self.keyword}",
+            f"https://www.expireddomains.net/expired-domains/?q={self.keyword}",
+            f"https://www.expireddomains.net/deleted-domains/?q={self.keyword}",
+        ]
+        
+        for url in search_urls:
+            print(f"Trying URL: {url}")
+            response = self.sesh.get(url, headers=headers)
+            print(f"Response status: {response.status_code}, URL: {response.url}")
+            
+            if "login" not in response.url.lower():
+                print("Found working URL!")
+                break
         print(f"Search response status: {response.status_code}")
         print(f"Search response URL: {response.url}")
         print(f"Response length: {len(response.text)}")
