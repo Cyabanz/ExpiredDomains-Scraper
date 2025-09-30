@@ -33,7 +33,7 @@ class User:
             'redirect_to_url': '/home',
         }
 
-        response = self.sesh.post('https://www.expireddomains.net/login/', headers=headers, data=data)
+        response = self.sesh.post('https://www.expireddomains.net/logincheck/', headers=headers, data=data)
 
         if "The supplied login information are unknown." in response.text:
             return False
