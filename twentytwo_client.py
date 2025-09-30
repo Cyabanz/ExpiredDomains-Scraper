@@ -15,7 +15,7 @@ class TwentyTwoClient:
 	"""Client wrapper for 22.do API."""
 
 	def __init__(self, address: Optional[str] = None, password: Optional[str] = None, api_key: Optional[str] = None) -> None:
-		self.base_url = "https://22.do"
+		self.base_url = "https://22.do/api/v2"
 		self.session = requests.Session()
 		self.address = address or os.getenv("TWENTYTWO_ADDRESS")
 		self.password = password or os.getenv("TWENTYTWO_PASSWORD")
