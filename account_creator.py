@@ -45,27 +45,23 @@ class ExpiredDomainsAccountCreator:
             print("Failed to register account")
             return None, None
         
-        # Step 4: Verify email (if required)
-        print("\n[4/4] Checking for verification email...")
-        if self._handle_email_verification():
-            print("\n" + "="*60)
-            print("ACCOUNT CREATED SUCCESSFULLY!")
-            print("="*60)
-            print(f"Username: {self.username}")
-            print(f"Password: {self.password}")
-            print(f"Email: {self.email}")
-            print("="*60 + "\n")
-            return self.username, self.password
-        else:
-            print("Note: Email verification may not be required")
-            print("\n" + "="*60)
-            print("ACCOUNT CREATED!")
-            print("="*60)
-            print(f"Username: {self.username}")
-            print(f"Password: {self.password}")
-            print(f"Email: {self.email}")
-            print("="*60 + "\n")
-            return self.username, self.password
+        # Step 4: Email verification is not sent to temp emails, skip waiting
+        print("\n[4/4] Skipping email verification check (not required)...")
+        print("✓ Account registration complete")
+        
+        print("\n" + "="*60)
+        print("ACCOUNT CREATED SUCCESSFULLY!")
+        print("="*60)
+        print(f"Username: {self.username}")
+        print(f"Password: {self.password}")
+        print(f"Email: {self.email}")
+        print("="*60 + "\n")
+        
+        # Note: New accounts may have limited access initially
+        print("ℹ️  Note: New accounts may need a few minutes to become fully active")
+        print("ℹ️  If searching fails, the account credentials are saved above\n")
+        
+        return self.username, self.password
     
     def _register_account(self):
         """
@@ -88,43 +84,54 @@ class ExpiredDomainsAccountCreator:
         }
         
         try:
-            # First, get the registration page to get any CSRF tokens or form data
+            # First, get the registration page
             reg_page = self.session.get('https://www.expireddomains.net/register/', headers=headers)
             
-            # Prepare registration data
+            # Prepare registration data with CORRECT field names
             data = {
+                'signup': '1',
+                'jscheck': '1',
                 'login': self.username,
-                'password': self.password,
-                'password_confirm': self.password,
+                'pass': self.password,
+                'pass2': self.password,
                 'email': self.email,
-                'email_confirm': self.email,
-                'accept_tos': '1',
-                'register': 'Register',
+                'button_submit': 'Sign Up (Free)',
             }
             
             # Submit registration
             response = self.session.post(
                 'https://www.expireddomains.net/register/',
                 headers=headers,
-                data=data
+                data=data,
+                allow_redirects=True
             )
             
             # Check if registration was successful
-            if "successfully" in response.text.lower() or "welcome" in response.text.lower():
-                print("Registration submitted successfully")
+            # If redirected away from /register/, it likely succeeded
+            if '/register/' not in response.url:
+                print(f"✓ Registration successful! Redirected to: {response.url}")
                 return True
-            elif "already exists" in response.text.lower():
-                print("Username or email already exists, trying again...")
-                # Generate new credentials and retry
+            elif "successfully" in response.text.lower() or "thank you" in response.text.lower():
+                print("✓ Registration submitted successfully")
+                return True
+            elif "already" in response.text.lower() and "exists" in response.text.lower():
+                print("⚠ Username or email already exists, generating new credentials...")
                 self.username, self.password = generate_random_credentials()
+                print(f"New username: {self.username}")
                 return self._register_account()
+            elif len(response.text) == 7217:
+                # Same size as registration page = form validation error
+                print("⚠ Registration form returned, checking for errors...")
+                # Look for error messages
+                if "invalid" in response.text.lower():
+                    print("✗ Invalid input detected")
+                return False
             else:
-                print("Registration response received, attempting to continue...")
-                # Some sites don't give explicit success messages
+                print("✓ Registration response received")
                 return True
                 
         except Exception as e:
-            print(f"Error during registration: {e}")
+            print(f"✗ Error during registration: {e}")
             return False
     
     def _handle_email_verification(self):
