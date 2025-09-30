@@ -1,10 +1,12 @@
 from pyquery import PyQuery    
-import requests,config,os,time
+import requests,os,time
 
 class User:
 
-    def __init__(self,keyword) -> None:
+    def __init__(self, keyword, username=None, password=None) -> None:
         self.keyword = keyword
+        self.username = username
+        self.password = password
         self.sesh = requests.Session()
 
 
@@ -28,8 +30,8 @@ class User:
         }
 
         data = {
-            'login': config.username,
-            'password': config.password,
+            'login': self.username,
+            'password': self.password,
             'redirect_to_url': '/home',
         }
 
