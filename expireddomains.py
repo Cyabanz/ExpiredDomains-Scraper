@@ -11,34 +11,84 @@ class User:
     def get_cookie(self):
 
         headers = {
-            'authority': 'member.expireddomains.net',
+            'authority': 'www.expireddomains.net',
             'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
             'accept-language': 'en-US,en;q=0.9,pl-PL;q=0.8,pl;q=0.7,de;q=0.6',
             'cache-control': 'max-age=0',
-            'origin': 'null',
+            'origin': 'https://www.expireddomains.net',
             'sec-ch-ua': '"Google Chrome";v="105", "Not)A;Brand";v="8", "Chromium";v="105"',
             'sec-ch-ua-mobile': '?0',
             'sec-ch-ua-platform': '"Windows"',
             'sec-fetch-dest': 'document',
             'sec-fetch-mode': 'navigate',
-            'sec-fetch-site': 'same-site',
+            'sec-fetch-site': 'same-origin',
             'sec-fetch-user': '?1',
             'upgrade-insecure-requests': '1',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36',
         }
 
-        data = {
-            'login': config.username,
-            'password': config.password,
-            'redirect_to_url': '/home',
-        }
+        # First, get the login page to see the form structure
+        login_page = self.sesh.get('https://www.expireddomains.net/login/', headers=headers)
+        print(f"Login page status: {login_page.status_code}")
+        
+        # Look for form fields in the HTML
+        pq = PyQuery(login_page.text)
+        forms = pq('form')
+        print(f"Found {len(forms)} forms on login page")
+        for i, form in enumerate(forms.items()):
+            print(f"Form {i+1} action: {form.attr('action')}")
+            inputs = form('input')
+            for inp in inputs.items():
+                print(f"  Input: name='{inp.attr('name')}', type='{inp.attr('type')}'")
+        
+        # Try different field names that might be used
+        data_options = [
+            {
+                'login': config.username,
+                'password': config.password,
+                'redirect_to_url': '/home',
+            },
+            {
+                'username': config.username,
+                'password': config.password,
+                'redirect_to_url': '/home',
+            },
+            {
+                'user': config.username,
+                'pass': config.password,
+                'redirect_to_url': '/home',
+            },
+            {
+                'email': config.username,
+                'password': config.password,
+                'redirect_to_url': '/home',
+            }
+        ]
 
-        response = self.sesh.post('https://member.expireddomains.net/login/', headers=headers, data=data)
+        for i, data in enumerate(data_options):
+            print(f"Trying data option {i+1}: {list(data.keys())}")
+            response = self.sesh.post('https://www.expireddomains.net/logincheck/', headers=headers, data=data)
+            
+            print(f"Login response status: {response.status_code}")
+            print(f"Login response URL: {response.url}")
+            print(f"Cookies after login: {dict(self.sesh.cookies)}")
 
-        if "The supplied login information are unknown." in response.text:
-            return False
-        else:
-            return True
+            if "The supplied login information are unknown." in response.text:
+                print("Login failed: Invalid credentials")
+                continue
+            elif "accountdeactivated" in response.url:
+                print("Login failed: Account deactivated")
+                print(f"Error page content: {response.text[:200]}")
+                continue
+            elif "Login" in response.text and "title" in response.text.lower():
+                print("Login failed: Still on login page")
+                continue
+            else:
+                print("Login successful")
+                return True
+        
+        print("All login attempts failed")
+        return False
 
 
 
@@ -64,13 +114,42 @@ class User:
             'position': 'member',
         }
 
-        response = self.sesh.get('https://member.expireddomains.net/domainnamesearch/', params=params, headers=headers)
+        response = self.sesh.get('https://www.expireddomains.net/domainnamesearch/', params=params, headers=headers)
+        print(f"Search response status: {response.status_code}")
+        print(f"Search response URL: {response.url}")
+        print(f"Cookies for search: {dict(self.sesh.cookies)}")
+        
         pq = PyQuery(response.text)
-        tag = pq('div#listing > div.infos.form-inline > strong')
-        try:
-            self.result_max = int(tag.text().replace(',',''))
+        
+        # Try different selectors to find the result count
+        selectors = [
+            'div#listing > div.infos.form-inline > strong',
+            'div.infos.form-inline strong',
+            '.infos strong',
+            'strong',
+            'div#listing strong'
+        ]
+        
+        result_count = None
+        for selector in selectors:
+            tag = pq(selector)
+            if tag.text() and tag.text().strip():
+                try:
+                    result_count = int(tag.text().replace(',',''))
+                    print(f"Found {result_count} results for keyword: {self.keyword} using selector: {selector}")
+                    break
+                except:
+                    continue
+        
+        if result_count is not None:
+            self.result_max = result_count
             return True
-        except:
+        else:
+            print(f"No results found for keyword: {self.keyword}")
+            print(f"Response text length: {len(response.text)}")
+            # Print a snippet of the response to debug
+            print("Response snippet:")
+            print(response.text[:500])
             return False
 
     def scrape(self):
@@ -98,7 +177,7 @@ class User:
                 'q': self.keyword,
             }
 
-            response = self.sesh.get('https://member.expireddomains.net/domain-name-search/', params=params, headers=headers)
+            response = self.sesh.get('https://www.expireddomains.net/domain-name-search/', params=params, headers=headers)
 
             pq = PyQuery(response.text)
             raw_dom = pq('tbody > tr > td.field_domain > a').items()
@@ -108,7 +187,7 @@ class User:
             
             with open(f"domains/{self.keyword}.txt",'a+') as raw: raw.write(new_doms)
             scraped += len(parsed_doms)
-            os.system('cls')
+            os.system('clear')
             print(f"CURRENT SESSION\nScraped - {scraped}\nTotal - {self.result_max}\nProgress - {round(((scraped*100)/self.result_max),0)}%\n")
             if len(response.text) < 200:
                 print(response.text)
