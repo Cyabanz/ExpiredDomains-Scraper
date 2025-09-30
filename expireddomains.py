@@ -73,7 +73,7 @@ class User:
         except:
             return False
 
-    def scrape(self):
+    def scrape(self, max_domains=200):
         try:os.remove(f"domains/{self.keyword}.txt")
         except:pass
         scraped = 0
@@ -92,6 +92,7 @@ class User:
             'upgrade-insecure-requests': '1',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36',
         }
+        print(f"Scraping limited to {max_domains} domains (to avoid getting banned)")
         while True:
             params = {
                 'start': str(scraped),
@@ -108,12 +109,23 @@ class User:
             
             with open(f"domains/{self.keyword}.txt",'a+') as raw: raw.write(new_doms)
             scraped += len(parsed_doms)
-            os.system('cls')
-            print(f"CURRENT SESSION\nScraped - {scraped}\nTotal - {self.result_max}\nProgress - {round(((scraped*100)/self.result_max),0)}%\n")
+            os.system('clear')
+            print(f"CURRENT SESSION\nScraped - {scraped}\nLimit - {max_domains}\nTotal Available - {self.result_max}\nProgress - {round(((scraped*100)/max_domains),0)}%\n")
+            
+            # Check if we hit our limit
+            if scraped >= max_domains:
+                print(f"Reached limit of {max_domains} domains. Stopping to avoid ban.")
+                break
+            
             if len(response.text) < 200:
                 print(response.text)
                 waittime = int(response.text.split(' ')[-2])
                 time.sleep(waittime)
+            
+            # Add delay between requests to avoid detection
+            print("Waiting 5 seconds before next request...")
+            time.sleep(5)
+            
             if scraped >= self.result_max:break
 
             
