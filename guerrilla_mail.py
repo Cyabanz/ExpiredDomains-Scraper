@@ -14,9 +14,10 @@ class GuerrillaMailClient:
         self.email_address = None
         self.sid_token = None
         
-    def get_email_address(self):
+    def get_email_address(self, preferred_domain='sharklasers.com'):
         """
         Get a new temporary email address from Guerrilla Mail
+        Uses sharklasers.com by default (looks more legitimate than guerrillamailblock.com)
         Returns the email address
         """
         params = {
@@ -32,6 +33,12 @@ class GuerrillaMailClient:
             
             self.email_address = data.get('email_addr')
             self.sid_token = data.get('sid_token')
+            
+            # Try to change to a more legitimate-looking domain
+            if preferred_domain and '@guerrillamailblock.com' in self.email_address:
+                email_user = self.email_address.split('@')[0]
+                # set_email_user changes the domain to sharklasers automatically for custom users
+                self.set_email_user(email_user)
             
             print(f"[GuerrillaMail] Created temporary email: {self.email_address}")
             return self.email_address

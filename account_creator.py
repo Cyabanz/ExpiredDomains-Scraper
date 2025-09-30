@@ -45,21 +45,23 @@ class ExpiredDomainsAccountCreator:
             print("Failed to register account")
             return None, None
         
-        # Step 4: Email verification is not sent to temp emails, skip waiting
-        print("\n[4/4] Skipping email verification check (not required)...")
-        print("✓ Account registration complete")
+        # Step 4: Wait for and process activation email
+        print("\n[4/4] Waiting for account activation email...")
+        print("(Account status: not activated - email verification required)")
+        
+        if self._handle_email_verification():
+            print("\n✅ Account activated successfully!")
+        else:
+            print("\n⚠️  No activation email received")
+            print("   Account created but may need manual activation")
         
         print("\n" + "="*60)
-        print("ACCOUNT CREATED SUCCESSFULLY!")
+        print("ACCOUNT CREATED!")
         print("="*60)
         print(f"Username: {self.username}")
         print(f"Password: {self.password}")
         print(f"Email: {self.email}")
         print("="*60 + "\n")
-        
-        # Note: New accounts may have limited access initially
-        print("ℹ️  Note: New accounts may need a few minutes to become fully active")
-        print("ℹ️  If searching fails, the account credentials are saved above\n")
         
         return self.username, self.password
     
@@ -136,68 +138,77 @@ class ExpiredDomainsAccountCreator:
     
     def _handle_email_verification(self):
         """
-        Check for and handle email verification
+        Check for and handle email verification - EXTENDED WAIT
         """
-        print("[INFO] Waiting for verification email from expireddomains.net...")
+        print("⏳ Waiting for activation email from expireddomains.net...")
+        print("   (Checking every 10 seconds for up to 5 minutes)")
         
-        # Check for emails multiple times
-        max_attempts = 12
-        check_interval = 5
+        # Check for emails - longer wait, less frequent checks
+        max_attempts = 30  # 30 * 10 = 5 minutes
+        check_interval = 10
         
         for attempt in range(max_attempts):
             time.sleep(check_interval)
             emails = self.email_client.check_email()
             
             if emails:
-                print(f"[INFO] Checking {len(emails)} email(s)...")
+                print(f"\n📧 Checking {len(emails)} email(s)... [Attempt {attempt + 1}/{max_attempts}]")
                 
-                # Look through all emails for one from expireddomains
+                # Look through ALL emails
                 for email_summary in emails:
                     email_from = email_summary.get('mail_from', '').lower()
                     email_subject = email_summary.get('mail_subject', '')
                     email_id = email_summary.get('mail_id')
                     
-                    print(f"  - From: {email_from}, Subject: {email_subject}")
+                    print(f"  📩 From: {email_from}")
+                    print(f"     Subject: {email_subject}")
                     
-                    # Check if it's from expireddomains
-                    if 'expireddomains' in email_from or 'expired' in email_subject.lower():
-                        print(f"[INFO] Found expireddomains.net email!")
+                    # Check if it's from expireddomains (very broad check)
+                    if ('expireddomains' in email_from or 
+                        'expired' in email_from or
+                        'domain' in email_from or
+                        'activat' in email_subject.lower() or
+                        'verif' in email_subject.lower() or
+                        'confirm' in email_subject.lower() or
+                        'expired' in email_subject.lower()):
+                        
+                        print(f"  ✓ This looks like an activation email!")
                         
                         # Fetch full email
                         email_data = self.email_client.fetch_email(email_id)
                         if email_data:
                             email_body = email_data.get('mail_body', '')
                             
-                            # Look for verification links
-                            link_pattern = r'https?://(?:www\.)?expireddomains\.net/[^\s<>"\']+(?:verify|confirm|activate|validation|register|code|token)[^\s<>"\']*'
-                            links = re.findall(link_pattern, email_body, re.IGNORECASE)
+                            # Look for ANY link to expireddomains.net
+                            all_links = re.findall(r'https?://[^\s<>"\']+', email_body, re.IGNORECASE)
+                            ed_links = [l for l in all_links if 'expireddomains.net' in l.lower()]
                             
-                            if not links:
-                                # Try broader pattern
-                                link_pattern2 = r'https?://(?:www\.)?expireddomains\.net/[^\s<>"\'&]+'
-                                links = re.findall(link_pattern2, email_body, re.IGNORECASE)
+                            print(f"  Found {len(ed_links)} link(s) to expireddomains.net")
                             
-                            if links:
-                                verification_link = links[0].strip().rstrip('.,;)')
-                                print(f"[INFO] Found verification link: {verification_link}")
-                                
-                                try:
-                                    headers = {
-                                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                                    }
-                                    response = self.session.get(verification_link, headers=headers, allow_redirects=True)
-                                    if response.status_code == 200:
-                                        print("[SUCCESS] Email verified successfully")
-                                        time.sleep(3)
-                                        return True
-                                except Exception as e:
-                                    print(f"[ERROR] Error clicking verification link: {e}")
-            
-            if attempt < max_attempts - 1:
-                print(f"[INFO] No verification email yet, waiting... ({attempt + 1}/{max_attempts})")
+                            if ed_links:
+                                for link in ed_links:
+                                    verification_link = link.strip().rstrip('.,;)\'\"')
+                                    print(f"  🔗 Trying link: {verification_link[:80]}...")
+                                    
+                                    try:
+                                        headers = {
+                                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                                        }
+                                        response = self.session.get(verification_link, headers=headers, allow_redirects=True)
+                                        print(f"     Response: {response.status_code} -> {response.url[:80]}")
+                                        
+                                        if 'activated' in response.url.lower() or 'success' in response.url.lower():
+                                            print("  ✅ ACCOUNT ACTIVATED!")
+                                            time.sleep(3)
+                                            return True
+                                    except Exception as e:
+                                        print(f"     Error: {e}")
+                                        continue
+            else:
+                print(f"⏳ No emails yet... [Attempt {attempt + 1}/{max_attempts}]", end='\r')
         
-        print("[WARNING] No verification email received from expireddomains.net")
-        print("[INFO] The site may not require email verification, or registration may have failed")
+        print("\n\n⚠️  No activation email received after 5 minutes")
+        print("💡 The site may be blocking temporary email addresses")
         return False
 
 
