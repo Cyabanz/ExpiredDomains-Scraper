@@ -1,0 +1,8 @@
+//TEST DOMAIN SCRAPING OUTPUT
+
+test-domain1.com
+test-domain2.net
+test-domain3.org
+example-test.com
+demo-test.net
+sample-test.org
