@@ -26,19 +26,18 @@ class User:
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36',
         }
 
-        # Try to authenticate directly on the member subdomain
-        print("Trying to authenticate on member subdomain...")
-        member_login_page = self.sesh.get('https://member.expireddomains.net/login/', headers=headers)
-        print(f"Member login page status: {member_login_page.status_code}")
+        # First, get the login page on main domain
+        login_page = self.sesh.get('https://www.expireddomains.net/login/', headers=headers)
+        print(f"Login page status: {login_page.status_code}")
         
-        # Login with credentials on member subdomain
+        # Login with credentials on main domain
         data = {
             'login': config.username,
             'password': config.password,
             'redirect_to_url': '/home',
         }
         
-        response = self.sesh.post('https://member.expireddomains.net/logincheck/', headers=headers, data=data)
+        response = self.sesh.post('https://www.expireddomains.net/logincheck/', headers=headers, data=data)
         print(f"Login response status: {response.status_code}")
         print(f"Login response URL: {response.url}")
         
@@ -120,8 +119,8 @@ class User:
         }
 
 
-        # Try the exact URL format you mentioned
-        url = f"https://member.expireddomains.net/domain-name-search/?q={self.keyword}&searchinit=1"
+        # Try using the main domain instead
+        url = f"https://www.expireddomains.net/domain-name-search/?q={self.keyword}&searchinit=1"
         print(f"Trying URL: {url}")
         response = self.sesh.get(url, headers=headers)
         print(f"Search response status: {response.status_code}")
