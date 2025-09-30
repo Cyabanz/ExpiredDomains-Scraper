@@ -9,24 +9,36 @@ class User:
 
 
     def get_cookie(self):
-
+        # Try to access without login first
         headers = {
             'authority': 'www.expireddomains.net',
             'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
             'accept-language': 'en-US,en;q=0.9,pl-PL;q=0.8,pl;q=0.7,de;q=0.6',
             'cache-control': 'max-age=0',
-            'origin': 'https://www.expireddomains.net',
             'sec-ch-ua': '"Google Chrome";v="105", "Not)A;Brand";v="8", "Chromium";v="105"',
             'sec-ch-ua-mobile': '?0',
             'sec-ch-ua-platform': '"Windows"',
             'sec-fetch-dest': 'document',
             'sec-fetch-mode': 'navigate',
-            'sec-fetch-site': 'same-origin',
+            'sec-fetch-site': 'none',
             'sec-fetch-user': '?1',
             'upgrade-insecure-requests': '1',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36',
         }
 
+        # Try accessing the search page directly without login
+        print("Trying to access without login...")
+        test_response = self.sesh.get('https://www.expireddomains.net/domain-name-search/', headers=headers)
+        print(f"Direct access status: {test_response.status_code}")
+        print(f"Direct access URL: {test_response.url}")
+        
+        if "login" not in test_response.url.lower() and test_response.status_code == 200:
+            print("Direct access successful - no login required")
+            return True
+        
+        # If direct access doesn't work, try with login
+        print("Direct access failed, trying with login...")
+        
         # First, get the login page to see the form structure
         login_page = self.sesh.get('https://www.expireddomains.net/login/', headers=headers)
         print(f"Login page status: {login_page.status_code}")
@@ -149,7 +161,22 @@ class User:
             print(f"Response text length: {len(response.text)}")
             # Print a snippet of the response to debug
             print("Response snippet:")
-            print(response.text[:500])
+            print(response.text[:1000])
+            
+            # Try to find any domain results in the response
+            domain_links = pq('a[href*="domain"]')
+            print(f"Found {len(domain_links)} domain links")
+            domain_links_list = list(domain_links.items())
+            for i, link in enumerate(domain_links_list[:5]):  # Show first 5
+                print(f"  Link {i+1}: {link.text()} -> {link.attr('href')}")
+            
+            # Try to find domain names in the response
+            domain_names = pq('td.field_domain a')
+            print(f"Found {len(domain_names)} domain names")
+            domain_names_list = list(domain_names.items())
+            for i, domain in enumerate(domain_names_list[:5]):  # Show first 5
+                print(f"  Domain {i+1}: {domain.text()}")
+            
             return False
 
     def scrape(self):
