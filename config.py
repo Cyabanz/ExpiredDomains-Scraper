@@ -1,3 +1,3 @@
-username = 'Cyabanz' 
-password = '12345678'
+username = 'cyaban' 
+password = '1234567'
 #username and password for the websites account
