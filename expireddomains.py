@@ -9,35 +9,9 @@ class User:
 
 
     def get_cookie(self):
-        # Try to access without login first
-        headers = {
-            'authority': 'www.expireddomains.net',
-            'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-            'accept-language': 'en-US,en;q=0.9,pl-PL;q=0.8,pl;q=0.7,de;q=0.6',
-            'cache-control': 'max-age=0',
-            'sec-ch-ua': '"Google Chrome";v="105", "Not)A;Brand";v="8", "Chromium";v="105"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"Windows"',
-            'sec-fetch-dest': 'document',
-            'sec-fetch-mode': 'navigate',
-            'sec-fetch-site': 'none',
-            'sec-fetch-user': '?1',
-            'upgrade-insecure-requests': '1',
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36',
-        }
-
-        # Try accessing the search page directly without login
-        print("Trying to access without login...")
-        test_response = self.sesh.get('https://www.expireddomains.net/domain-name-search/', headers=headers)
-        print(f"Direct access status: {test_response.status_code}")
-        print(f"Direct access URL: {test_response.url}")
-        
-        if "login" not in test_response.url.lower() and test_response.status_code == 200:
-            print("Direct access successful - no login required")
-            return True
-        
-        # If direct access doesn't work, try with login
-        print("Direct access failed, trying with login...")
+        # Skip login for now and try direct access
+        print("Skipping login, trying direct access...")
+        return True
         
         # First, get the login page to see the form structure
         login_page = self.sesh.get('https://www.expireddomains.net/login/', headers=headers)
@@ -92,6 +66,10 @@ class User:
                 print("Login failed: Account deactivated")
                 print(f"Error page content: {response.text[:200]}")
                 continue
+            elif "emailauth" in response.url:
+                print("Login requires email verification")
+                print(f"Email auth page content: {response.text[:300]}")
+                continue
             elif "Login" in response.text and "title" in response.text.lower():
                 print("Login failed: Still on login page")
                 continue
@@ -106,27 +84,30 @@ class User:
 
     def get_result_data(self):
         headers = {
-            'authority': 'member.expireddomains.net',
-            'accept': '*/*',
+            'authority': 'www.expireddomains.net',
+            'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
             'accept-language': 'en-US,en;q=0.9,pl-PL;q=0.8,pl;q=0.7,de;q=0.6',
-            'referer': 'https://member.expireddomains.net/domain-name-search/?q=mikecox&searchinit=1',
+            'referer': 'https://www.expireddomains.net/domain-name-search/',
             'sec-ch-ua': '"Google Chrome";v="105", "Not)A;Brand";v="8", "Chromium";v="105"',
             'sec-ch-ua-mobile': '?0',
             'sec-ch-ua-platform': '"Windows"',
-            'sec-fetch-dest': 'empty',
-            'sec-fetch-mode': 'cors',
+            'sec-fetch-dest': 'document',
+            'sec-fetch-mode': 'navigate',
             'sec-fetch-site': 'same-origin',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36',
-            'x-requested-with': 'XMLHttpRequest',
         }
 
+        # Try different search URLs and parameters
+        search_urls = [
+            ('https://www.expireddomains.net/domain-name-search/', {'q': self.keyword}),
+            ('https://www.expireddomains.net/domain-name-search/', {'q': self.keyword, 'searchinit': '1'}),
+            ('https://www.expireddomains.net/domainnamesearch/', {'q': self.keyword}),
+            ('https://www.expireddomains.net/domainnamesearch/', {'q': self.keyword, 'position': 'member'}),
+        ]
 
-        params = {
-            'q': self.keyword,
-            'position': 'member',
-        }
-
-        response = self.sesh.get('https://www.expireddomains.net/domainnamesearch/', params=params, headers=headers)
+        for url, params in search_urls:
+            print(f"Trying URL: {url} with params: {params}")
+            response = self.sesh.get(url, params=params, headers=headers)
         print(f"Search response status: {response.status_code}")
         print(f"Search response URL: {response.url}")
         print(f"Cookies for search: {dict(self.sesh.cookies)}")
