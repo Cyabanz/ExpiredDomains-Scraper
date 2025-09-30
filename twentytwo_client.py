@@ -14,16 +14,20 @@ from typing import List, Optional, Dict, Any
 class TwentyTwoClient:
 	"""Client wrapper for 22.do API."""
 
-	def __init__(self, address: Optional[str] = None, password: Optional[str] = None) -> None:
+	def __init__(self, address: Optional[str] = None, password: Optional[str] = None, api_key: Optional[str] = None) -> None:
 		self.base_url = "https://22.do"
 		self.session = requests.Session()
 		self.address = address or os.getenv("TWENTYTWO_ADDRESS")
 		self.password = password or os.getenv("TWENTYTWO_PASSWORD")
+		self.api_key = api_key or os.getenv("TWENTYTWO_API_KEY")
 		self.bearer_token: Optional[str] = None
 		self.default_headers = {
 			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
 			"Accept": "application/json, text/plain, */*",
 		}
+		# If API key is provided, use it directly
+		if self.api_key:
+			self.bearer_token = self.api_key
 
 	def _request(self, method: str, path: str, **kwargs) -> requests.Response:
 		url = f"{self.base_url}{path}"
@@ -35,9 +39,12 @@ class TwentyTwoClient:
 		return resp
 
 	def login(self) -> bool:
-		"""Authenticate and store bearer token."""
+		"""Authenticate and store bearer token. Skipped if api_key provided."""
+		if self.api_key:
+			print("[22.do] Using provided API key")
+			return True
 		if not self.address or not self.password:
-			print("[22.do] Missing credentials. Set TWENTYTWO_ADDRESS and TWENTYTWO_PASSWORD env vars.")
+			print("[22.do] Missing credentials. Set TWENTYTWO_ADDRESS and TWENTYTWO_PASSWORD env vars or TWENTYTWO_API_KEY.")
 			return False
 		try:
 			resp = self._request("POST", "/auth", json={"address": self.address, "password": self.password})
