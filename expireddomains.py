@@ -11,7 +11,7 @@ class User:
     def get_cookie(self):
 
         headers = {
-            'authority': 'www.expireddomains.net',
+            'authority': 'member.expireddomains.net',
             'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
             'accept-language': 'en-US,en;q=0.9,pl-PL;q=0.8,pl;q=0.7,de;q=0.6',
             'cache-control': 'max-age=0',
@@ -33,7 +33,7 @@ class User:
             'redirect_to_url': '/home',
         }
 
-        response = self.sesh.post('https://www.expireddomains.net/login/', headers=headers, data=data)
+        response = self.sesh.post('https://member.expireddomains.net/login/', headers=headers, data=data)
 
         if "The supplied login information are unknown." in response.text:
             return False
@@ -44,10 +44,10 @@ class User:
 
     def get_result_data(self):
         headers = {
-            'authority': 'www.expireddomains.net',
+            'authority': 'member.expireddomains.net',
             'accept': '*/*',
             'accept-language': 'en-US,en;q=0.9,pl-PL;q=0.8,pl;q=0.7,de;q=0.6',
-            'referer': 'https://www.expireddomains.net/domain-name-search/?q=mikecox&searchinit=1',
+            'referer': 'https://member.expireddomains.net/domain-name-search/?q=mikecox&searchinit=1',
             'sec-ch-ua': '"Google Chrome";v="105", "Not)A;Brand";v="8", "Chromium";v="105"',
             'sec-ch-ua-mobile': '?0',
             'sec-ch-ua-platform': '"Windows"',
@@ -64,7 +64,7 @@ class User:
             'position': 'member',
         }
 
-        response = self.sesh.get('https://www.expireddomains.net/domainnamesearch/', params=params, headers=headers)
+        response = self.sesh.get('https://member.expireddomains.net/domainnamesearch/', params=params, headers=headers)
         pq = PyQuery(response.text)
         tag = pq('div#listing > div.infos.form-inline > strong')
         try:
@@ -78,10 +78,10 @@ class User:
         except:pass
         scraped = 0
         headers = {
-            'authority': 'www.expireddomains.net',
+            'authority': 'member.expireddomains.net',
             'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
             'accept-language': 'en-US,en;q=0.9,pl-PL;q=0.8,pl;q=0.7,de;q=0.6',
-            'referer': 'https://www.expireddomains.net/domain-name-search/?q=bro',
+            'referer': 'https://member.expireddomains.net/domain-name-search/?q=bro',
             'sec-ch-ua': '"Google Chrome";v="105", "Not)A;Brand";v="8", "Chromium";v="105"',
             'sec-ch-ua-mobile': '?0',
             'sec-ch-ua-platform': '"Windows"',
@@ -98,7 +98,7 @@ class User:
                 'q': self.keyword,
             }
 
-            response = self.sesh.get('https://www.expireddomains.net/domain-name-search/', params=params, headers=headers)
+            response = self.sesh.get('https://member.expireddomains.net/domain-name-search/', params=params, headers=headers)
 
             pq = PyQuery(response.text)
             raw_dom = pq('tbody > tr > td.field_domain > a').items()
